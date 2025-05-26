@@ -1,0 +1,241 @@
+---
+title: "Kolonisering"
+author: "Olivia Munk-Olsen, Laura Holm Løjborg, Silas Bramsen, Freja Bille Deichmann"
+date: "2025-05-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(gapminder)
+library(sf)
+```
+
+Loading the Excel file “colonized_data”.
+```{r kolonarisering}
+colonized_data <- data.frame(
+  Country = c('India', 'Australia', 'Hong Kong, China','Canada', 'South Africa','Algeria', 'Vietnam', 'Morocco', 'Brazil', 'Mozambique',  'Indonesia', 'Suriname', 'Congo, Dem. Rep.', 'Rwanda', 'Namibia', 'Somalia', 'Libya', 'Eritrea', 'Philippines', 'Puerto Rico', 'Kazakhstan', 'Georgia', 'Moldova', 'Afghanistan', 'Tanzania',  'Czech Republic', 'Slovakia', 'Romania',  'Serbia', 'Bulgaria','Malaysia'),
+  Colonial_Overlord = c('United Kingdom', 'United Kingdom','United Kingdom','United Kingdom', 'United Kingdom', 'France', 'France', 'France', 'Portugal', 'Portugal', 'Netherlands', 'Netherlands', 'Belgium','Belgium', 'Germany', 'Italy', 'Italy','Italy', 'United States', 'United States', 'Russia', 'Russia','Russia', 'United Kingdom', 'Germany', 'Austria', 'Austria','Austria', 'Turkey','Turkey','United Kingdom'),
+  Years_of_Colonization = c(190, 132, 156, 108, 120, 132, 67, 44, 322, 477, 350, 235, 80, 40, 35, 36, 31, 62, 48, 126, 250, 108,103 ,80, 44,300, 500, 300, 350, 350, 171)
+)
+
+dir.create("data")
+write.csv(colonized_data, "data/colonized_countries.csv", row.names = FALSE)
+read.csv("data/colonized_countries.csv")
+
+```
+
+Loading the Excel file “not_colonized_data”.
+```{r uncolonized}
+not_colonized_data <- data.frame(
+  Country = c('Japan', 'Korea, Rep.', 'Thailand', 'Turkey', 'Saudi Arabia', 'Iran', 'Iceland', 
+              'Sweden', 'Norway', 'Switzerland', 'Afghanistan', 'Bhutan', 'Nepal', 'Liberia', 
+              'Mongolia', 'Korea, Dem. Rep.', 'Ethiopia', 'Tonga', 'Tibet', 'Haiti',  
+               'Luxembourg', 'Lesotho', 'Malta', 'Swaziland', 'Chile', 'China'),
+  Reasonably_Prosperous = c('YES', 'YES', 'YES', 'YES', 'YES', 'YES', 'YES', 
+                            'YES', 'YES', 'YES', 'NO', 'NO', 'NO', 'NO', 
+                            'NO', 'NO', 'NO', 'NO', 'NO', 'NO',  
+                             'YES',  'NO', 'YES', 'NO', 'YES', 'NO')
+)
+
+write.csv(not_colonized_data, "data/not_colonized_countries.csv", row.names = FALSE)
+
+```
+
+Investigate economic development, we load the list of countries with economic indicators from the data set “gapminder_unfiltered”.
+```{r join-countries-to-gapminder}
+# filtered gapminder
+unique(gapminder$country)
+
+# unfiltered gapminder
+data("gapminder_unfiltered")
+unique(gapminder_unfiltered$country)
+
+# compare the values to your (un-)colonized datasets
+sort(unique(colonized_data$Country))
+sort(unique(not_colonized_data$Country))
+
+# join gapminder data with your country lists
+colonized_data <- colonized_data %>% 
+  left_join(gapminder_unfiltered, by = c("Country" = "country"))
+not_colonized_data <- not_colonized_data %>% 
+  left_join(gapminder_unfiltered, by = c("Country" = "country"))
+```
+
+Filter the five countries that we wish to examine further, namely Thailand, Vietnam, Indonesia, the Philippines and Malaysia in the data frame and name it “southeastasia”.
+```{r}
+southeastasia <- gapminder_unfiltered%>%
+  filter(country%in%c("Thailand","Vietnam","Indonesia","Philippines","Malaysia"))
+
+southeastasia
+```
+
+Separate the data frame by gdp, population and life expectancy.
+```{r}
+gdp <- southeastasia %>%
+  select("country","year","gdpPercap")
+```
+
+```{r}
+ggplot(gdp, aes(x = year, y = gdpPercap, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country", 
+       x = "Year", 
+       y = "GDP per Capita (USD)")
+```
+
+```{r}
+pop <- southeastasia %>%
+  select("country","year","pop")
+```
+
+```{r}
+library(scales)
+
+ggplot(pop, aes(x = year, y = pop, group = country, color = country))+
+  geom_line()+
+   labs(title = "Population Over Time by Country", 
+       x = "Year", 
+       y = "Befolkning (i absolutte tal)")+
+  scale_y_continuous(labels = comma)
+```
+
+```{r}
+lifeExp <- southeastasia %>%
+  select("country","year","lifeExp")
+```
+
+```{r}
+ggplot(lifeExp, aes(x = year, y = lifeExp, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean life expectancy Over Time by Country", 
+       x = "Year", 
+       y = "Gennemsnitlig levealder (i år)")
+```
+
+
+Separate the four colonial powers, belonging to the colonized countries from the dataframe “southeastasia”, into a dataframe we name “colonial powers”.
+```{r}
+kolonimagter <- gapminder_unfiltered%>%
+  filter(country%in%c("United States","France","Netherlands","United Kingdom"))
+
+kolonimagter
+```
+
+
+
+Comparison of colonies and colonial powers.
+```{r}
+frankrigvietnam <- gapminder_unfiltered%>%
+  filter(country%in%c("France", "Vietnam"))
+
+ggplot(frankrigvietnam, aes(x = year, y = gdpPercap, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country", 
+       x = "Year", 
+       y = "GDP per Capita (USD)")
+```
+
+```{r}
+usaphilippinerne <- gapminder_unfiltered%>%
+  filter(country%in%c("United States", "Philippines"))
+
+ggplot(usaphilippinerne, aes(x = year, y = gdpPercap, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country", 
+       x = "Year", 
+       y = "GDP per Capita (USD)")
+```
+
+```{r}
+indonesienholland <- gapminder_unfiltered%>%
+  filter(country%in%c("Indonesia", "Netherlands"))
+
+ggplot(indonesienholland, aes(x = year, y = gdpPercap, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country", 
+       x = "Year", 
+       y = "GDP per Capita (USD)")
+```
+
+```{r}
+malaysiastorbritanien <- gapminder_unfiltered%>%
+  filter(country%in%c("Malaysia", "United Kingdom"))
+
+ggplot(malaysiastorbritanien, aes(x = year, y = gdpPercap, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country", 
+       x = "Year", 
+       y = "GDP per Capita (USD)")
+```
+
+```{r}
+thailand <- gapminder_unfiltered%>%
+  filter(country%in%c("Thailand"))
+
+ggplot(thailand, aes(x = year, y = gdpPercap, group = country, color = country))+
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country", 
+       x = "Year", 
+       y = "GDP per Capita (USD)")
+```
+
+
+GDP comparison of Southeast Asia and all countries.
+```{r}
+gapminder_unfiltered <- gapminder_unfiltered %>%
+  mutate(group_label = ifelse(country %in% c("Thailand", "Vietnam", "Indonesia", "Philippines", "Malaysia"),
+                              "Southeast Asia Focus", "Other Countries"))
+         
+ggplot(gapminder_unfiltered, aes(x = year, y = gdpPercap, group = country)) +
+  geom_line(aes(color = group_label), alpha = 0.5) +
+  labs(title = "GDP Comparison: Southeast Asia vs All Countries",
+       x = "Year", y = "GDP per Capita (USD)") +
+  theme_minimal() +
+  theme(legend.position = "right") + 
+  scale_color_manual(values = c("Southeast Asia Focus" = "darkred", "Other Countries" = "gray"))
+
+```
+
+
+Investegation of gdp, population and life expectancy for the colonies.
+```{r}
+gdp%>%
+  ggplot(aes(x=year, y=gdpPercap, colour=country)) + 
+  geom_line()+
+   labs(title = "Mean GDP Over Time by Country",
+       x = "Year", y = "GDP per Capita (USD)") +
+  theme_bw()+
+  facet_wrap(~country)
+```
+
+```{r}
+pop%>%
+  ggplot(aes(x=year, y=pop, colour=country)) + 
+  geom_line()+
+  labs(title = "Population Over Time by Country",
+       x = "Year", y = "Population") +
+  theme_bw()+
+  facet_wrap(~country)
+```
+
+```{r}
+lifeExp%>%
+  ggplot(aes(x=year, y=lifeExp, colour=country)) + 
+  geom_line()+
+   labs(title = "Mean life expectancy Over Time by Country",
+       x = "Year", y = "Life expectancy") +
+  theme_bw()+
+  facet_wrap(~country)
+```
+
+
+
+
+
+
+
